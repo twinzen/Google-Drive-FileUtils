@@ -25,14 +25,14 @@ public class ListFilesSample {
 		GDFileUtils gdfu = new GDFileUtils(credential);
 		
 		Collection<File> allFiles = gdfu.listFiles("", null);
-		System.out.println("------------------------------------------------------------");
+		System.out.println("-----------------------------------------------------------");
 		System.out.println("All files:");
 		for (File file : allFiles) {
 			System.out.println(file);
 		}
 		
 		Collection<File> files = gdfu.listFiles("0B64VHJrvrPWHc09wdHh0aXFOYjg", null);
-		System.out.println("------------------------------------------------------------");
+		System.out.println("-----------------------------------------------------------");
 		System.out.println("Files under a folder (id:0B64VHJrvrPWHc09wdHh0aXFOYjg):");
 		for (File file : files) {
 			System.out.println(file);
