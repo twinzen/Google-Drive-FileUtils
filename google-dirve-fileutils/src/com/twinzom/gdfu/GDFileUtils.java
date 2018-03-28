@@ -12,12 +12,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.Drive.Files.List;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.TeamDrive;
@@ -213,7 +213,7 @@ public class GDFileUtils {
 	 * @throws IOException
 	 */
     public void upload (File metadata, java.io.File localFile,
-			List<String> parentIds) throws IOException {
+			java.util.List<String> parentIds) throws IOException {
     	
     	String uploadUrlStr = GOOGLE_DRIVE_UPLOAD_URL+"?uploadType=resumable&supportsTeamDrives=true";
 
@@ -317,7 +317,7 @@ public class GDFileUtils {
 		        metadata.setParents(Collections.singletonList(destFolderId));
 				upload(metadata, localFile, Collections.singletonList(destFolderId));
 			} else {
-				List<File> files = getFilesInFolderByName(localFile.getName(), destFolderId);
+				java.util.List<File> files = getFilesInFolderByName(localFile.getName(), destFolderId);
 				
 				File remoteFolder = null;
 				for (File file : files) {
@@ -438,15 +438,13 @@ public class GDFileUtils {
 	 * </p>
 	 * 
 	 * @param folder
-	 * @param recursive
-	 * @param includeTeamDrive
 	 * @param q
 	 * @return
 	 * @throws IOException
 	 */
-	public Collection<File> listFiles(File folder, boolean recursive, String q) throws IOException {
+	public Collection<File> listFiles(File folder, String q) throws IOException {
 
-		return this.listFiles(folder.getId(), recursive, q);
+		return this.listFiles(folder.getId(), q);
 		
 	}
 	
@@ -462,32 +460,31 @@ public class GDFileUtils {
 	 * </p>
 	 * 
 	 * @param folder
-	 * @param recursive
 	 * @param q
 	 * @return
 	 * @throws IOException 
 	 */
-	public Collection<File> listFiles(String folderId, boolean recursive, String q) throws IOException {
+	public Collection<File> listFiles(String folderId, String q) throws IOException {
 		
-		List<File> files = null;
+		List preparedQuery = drive.files().list();
 		
-		if (teamDrive != null) {
-			drive.files().list()
-			.setQ("'"+folderId+"' in parents and trashed = false "+q)
-			.setIncludeTeamDriveItems(true)
-			.setTeamDriveId(teamDrive.getId())
-			.setSupportsTeamDrives(true)
-			.setCorpora("teamDrive")
-			.execute()
-			.getFiles();
-		} else {
-			drive.files().list()
-			.setQ("'"+folderId+"' in parents and trashed = false "+q)
-			.execute()
-			.getFiles();
+		if (!folderId.isEmpty()) {
+			preparedQuery.setQ("'"+folderId+"' in parents ");
 		}
 		
-
+		if (q != null) {
+			preparedQuery.setQ(preparedQuery.getQ() + " " + q);
+		}
+		
+		if (teamDrive != null) {
+			preparedQuery.setIncludeTeamDriveItems(true)
+						 .setTeamDriveId(teamDrive.getId())
+						 .setSupportsTeamDrives(true)
+						 .setCorpora("teamDrive");
+		}
+		
+		java.util.List<File> files = preparedQuery.execute().getFiles();
+		
 		return files;
 	}
     
@@ -499,9 +496,9 @@ public class GDFileUtils {
      * @return
      * @throws IOException
      */
-    public List<File> getFilesInFolderByName (String fileName, String folderId) throws IOException {
+    public java.util.List<File> getFilesInFolderByName (String fileName, String folderId) throws IOException {
     	
-    	List<File> files = null;
+    	java.util.List<File> files = null;
     	FileList result = null;
     	
     	if (teamDrive != null) {
@@ -520,7 +517,7 @@ public class GDFileUtils {
 
 		files = result.getFiles();
 		
-		List<File> matchedNameFiles = new ArrayList<File>();
+		java.util.List<File> matchedNameFiles = new ArrayList<File>();
 		for (File file: files) {
 			if (file.getName().equals(fileName)) {
 				matchedNameFiles.add(file);
@@ -571,7 +568,7 @@ public class GDFileUtils {
      * @return
      * @throws IOException
      */
-    public List<TeamDrive> listTeamDrives () throws IOException {
+    public java.util.List<TeamDrive> listTeamDrives () throws IOException {
     	TeamDriveList result = drive.teamdrives().list().execute();
 		return result.getTeamDrives();
     }
