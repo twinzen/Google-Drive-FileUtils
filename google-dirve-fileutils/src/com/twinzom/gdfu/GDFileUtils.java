@@ -41,12 +41,10 @@ import com.google.api.services.drive.model.TeamDriveList;
  * <li>downloading file 
  * <li>creating folder
  * <li>listing files and folders
- * <li>copying files and folders
- * <li>cloning files and folders
- * <li>moving files and folders
- * <li>deleting files and folders
+ * <li>copying file
+ * <li>moving file
+ * <li>deleting file
  * <li>converting file id to relative paths
- * <li>converting relative paths to file id
  * <li>renaming file
  * <li>listing Team Drives 
  * </ul>
@@ -84,6 +82,11 @@ public class GDFileUtils {
      * HTTP status code Permanent Redirect
      */
     private static final int HTTP_PERM_REDIR = 308;
+    
+    /**
+     * The default file fields  
+     */
+    private static final java.util.List<String> DEFAULT_FILE_FIELDS = Arrays.asList("id", "name", "kind", "mimeType", "parents");
     
     //-----------------------------------------------------------------------
 	/** 
@@ -337,24 +340,6 @@ public class GDFileUtils {
     }
     
     
-    
-    /**
-     * Download file from Google Drive
-     * 
-     * <p>
-     * With given file object.
-     * </p>
-     * 
-     * @param file
-     * @param localFile
-     * @throws IOException
-     */
-    public void download (File file, java.io.File localFile) throws IOException {
-		
-    	this.download(file.getId(), localFile);
-    	
-    }
-    
     /**
      * Download file from Google Drive
      * 
@@ -377,75 +362,30 @@ public class GDFileUtils {
 		fos.flush();
     	
     }
-    
-	/**
-	 * Makes a folder
-	 * 
-	 * <p>
-	 * With given parent folder (File object).
-	 * </p>
-	 * 
-	 * @param parent
-	 * @param folderName
-	 * @return
-	 * @throws IOException
-	 */
-	public File mkFolder (File parent, String folderName) throws IOException {
-		
-		return this.mkFolder(parent.getId(), folderName);
-		
-	}
 	
 	/**
 	 * Makes a folder
 	 * 
-	 * <p>
-	 * With given parent folder (File id).
-	 * </p>
-	 * 
-	 * @param parent
 	 * @param folderName
+	 * @param parentId
 	 * @return
 	 * @throws IOException
 	 */
-	public File mkFolder (String folderName, String folderId) throws IOException {
+	public File mkFolder (String folderName, String parentId) throws IOException {
 		
-		File fileMetadata = new File();
-		fileMetadata.setName(folderName);
-		fileMetadata.setParents(Arrays.asList(folderId));
-		fileMetadata.setMimeType("application/vnd.google-apps.folder");
+		File content = new File();
+		content.setName(folderName);
+		content.setParents(Arrays.asList(parentId));
+		content.setMimeType("application/vnd.google-apps.folder");
 		
 
 		File file = drive.files()
-						.create(fileMetadata)
+						.create(content)
 						.setFields("id")
 						.setSupportsTeamDrives(true)
 						.execute();
 		
 		return file;
-	}
-    
-
-	/**
-	 * Finds files within a given folder (and optionally its sub-folders)
-	 * 
-	 * <p>
-	 * With given folder (File object).
-	 * </p>
-	 * 
-	 * <p>
-	 * If teamDrive was set, this method will return teamDrive's files.
-	 * </p>
-	 * 
-	 * @param folder
-	 * @param q
-	 * @return
-	 * @throws IOException
-	 */
-	public Collection<File> listFiles(File folder, String q) throws IOException {
-
-		return this.listFiles(folder.getId(), q);
-		
 	}
 	
 	/**
@@ -464,9 +404,14 @@ public class GDFileUtils {
 	 * @return
 	 * @throws IOException 
 	 */
-	public Collection<File> listFiles(String folderId, String q) throws IOException {
+	public Collection<File> listFiles(String folderId, String q, java.util.List<String> fields) throws IOException {
 		
 		List preparedQuery = drive.files().list();
+		
+		if (fields == null || fields.isEmpty()) {
+			fields = DEFAULT_FILE_FIELDS;
+		}
+		preparedQuery.setFields("files("+Util.listToString(fields, ",", "")+")");
 		
 		if (!folderId.isEmpty()) {
 			preparedQuery.setQ("'"+folderId+"' in parents ");
@@ -498,25 +443,22 @@ public class GDFileUtils {
      */
     public java.util.List<File> getFilesInFolderByName (String fileName, String folderId) throws IOException {
     	
-    	java.util.List<File> files = null;
-    	FileList result = null;
     	
-    	if (teamDrive != null) {
-    		result = drive.files().list()
-    				.setQ("'"+folderId+"' in parents and trashed = false")
-    				.setIncludeTeamDriveItems(true)
-    				.setTeamDriveId(teamDrive.getId())
-    				.setSupportsTeamDrives(true)
-    				.setCorpora("teamDrive")
-    				.execute();
-		} else {
-			result = drive.files().list()
-					.setQ("'"+folderId+"' in parents and trashed = false")
-					.execute();
+    	List preparedQuery = drive.files().list();
+    	
+    	if (!folderId.isEmpty()) {
+			preparedQuery.setQ("'"+folderId+"' in parents ");
 		}
 
-		files = result.getFiles();
-		
+		if (teamDrive != null) {
+			preparedQuery.setIncludeTeamDriveItems(true)
+						 .setTeamDriveId(teamDrive.getId())
+						 .setSupportsTeamDrives(true)
+						 .setCorpora("teamDrive");
+		}
+    	
+		java.util.List<File> files = preparedQuery.execute().getFiles();
+    	
 		java.util.List<File> matchedNameFiles = new ArrayList<File>();
 		for (File file: files) {
 			if (file.getName().equals(fileName)) {
@@ -526,23 +468,6 @@ public class GDFileUtils {
 		
 		return matchedNameFiles;
     }
-
-    /**
-     * Rename a file or folder to new name
-     * 
-     * <p>
-	 * With given file object.
-	 * </p>
-     * 
-     * @param file
-     * @param newName
-     * @throws IOException
-     */
-    public void rename (File file, String newName) throws IOException {
-		
-    	this.rename(file.getId(), newName);
-    	
-	}
     
     /**
      * Rename a file or folder to new name
@@ -556,9 +481,14 @@ public class GDFileUtils {
      * @throws IOException
      */
     public void rename (String fileId, String newName) throws IOException {
+    	
 		File content = new File();
 		content.setName(newName);
-		drive.files().update(fileId, content).setSupportsTeamDrives(true).execute();
+		
+		drive.files().update(fileId, content)
+					 .setSupportsTeamDrives(true)
+					 .execute();
+		
 	}
     
 
@@ -569,45 +499,90 @@ public class GDFileUtils {
      * @throws IOException
      */
     public java.util.List<TeamDrive> listTeamDrives () throws IOException {
-    	TeamDriveList result = drive.teamdrives().list().execute();
+    	
+    	TeamDriveList result = drive.teamdrives()
+    								.list()
+    								.execute();
+    	
 		return result.getTeamDrives();
+		
     }
     
 
 	/**
 	 * Get file object by given file id
 	 * 
-	 * @param fileId
+	 * @param fileId - The file to be got
 	 * @return
 	 * @throws IOException
 	 */
 	public File getFileById (String fileId) throws IOException {
-		File file = drive.files().get(fileId).setSupportsTeamDrives(true).execute();
+		
+		File file = drive.files()
+						 .get(fileId)
+						 .setSupportsTeamDrives(true)
+						 .execute();
+		
 		return file;
+		
+	}
+	
+	/**
+	 * Delete a file
+	 * 
+	 * @param fileId - The file to be deleted
+	 * @throws IOException
+	 */
+	public void deleteFile (String fileId) throws IOException {
+		
+		drive.files().delete(fileId)
+					 .setSupportsTeamDrives(true)
+					 .execute();
+		
+	}
+	
+	/**
+	 * Copy a file to a folder
+	 * 
+	 * <p>
+	 * If destination folder ID is null, it will create a copy in same folder
+	 * </p>
+	 * 
+	 * @param fileId - The file to be copied
+	 * @param destFolderId - The destination folder 
+	 * @throws IOException
+	 */
+	public void copyFileToFolder(String fileId, String destFolderId) throws IOException {
+		
+		File content = null;
+		
+		if (destFolderId != null) {
+			content = new File();
+			content.setParents(Arrays.asList(destFolderId));
+		}
+		
+		drive.files().copy(fileId, content)
+					 .setSupportsTeamDrives(true)
+					 .execute();
+		
 	}
 
 	/* TODO: TO BE DONE.
-	public static void copyFileToFolder(File file, File folder) {}
-    
     public static void copyFolderToFolder(File srcFolder, File destFolder) {}
     
-    public static void copyFolderContent(File srcFolder, File destFolder) {}
+    public static void copyFolderContentToFolder(File srcFolder, File destFolder) {}
     
-    public static void cloneFileToFolder(File file, File folder) {}
+    public static void addFileToFolder(File file, File folder) {}
     
-    public static void cloneFolderToFolder(File srcFolder, File destFolder) {}
+    public static void addFolderToFolder(File srcFolder, File destFolder) {}
     
-    public static void cloneFolderContent(File srcFolder, File destFolder) {}
+    public static void addFolderContentToFolder(File srcFolder, File destFolder) {}
     
     public static void moveFileToFolder(File file, File folder) {}
     
     public static void moveFolderToFolder(File srcFolder, File destFolder) {}
     
-    public static void moveFolderContent(File srcFolder, File destFolder) {}
-    
-    public static void deleteFile(File file) {}
-    
-    public static void deleteFolder(File folder) {}
+    public static void moveFolderContentToFolder(File srcFolder, File destFolder) {}
     
     public static void cleanFolder(File folder) {}
     
