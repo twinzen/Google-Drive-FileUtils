@@ -11,19 +11,13 @@ import com.google.api.services.drive.model.File;
 import com.twinzom.gdfu.Authorization;
 import com.twinzom.gdfu.GDFileUtils;
 
-/**
- * @author twinzom
- * 
- * This class demonstrated how to use GDFU to get Google Drive files
- *
- */
-public class ListFilesSample extends Sample {
-
+public class CopyFileSample extends Sample {
+	
 	public static void main(String[] args) throws IOException, GeneralSecurityException {
 		GoogleCredential credential = Authorization.getCredential(KEY_FILE, Collections.singleton("https://www.googleapis.com/auth/drive"));
 		GDFileUtils gdfu = new GDFileUtils(credential);
 		
-		Collection<File> allFiles = gdfu.listFiles("", null, null);
+		Collection<File> allFiles = gdfu.listFiles("", null, Arrays.asList("id", "name"));
 		System.out.println("------------------------------------------------------------");
 		System.out.println("All files:");
 		for (File file : allFiles) {
@@ -36,6 +30,8 @@ public class ListFilesSample extends Sample {
 		for (File file : files) {
 			System.out.println(file);
 		}
+		
+		gdfu.copyFileToFolder("0B64VHJrvrPWHdVFLbVBmdFRYS0U", "0B64VHJrvrPWHWThNRXUtd244TXM");
 	}
 
 }
