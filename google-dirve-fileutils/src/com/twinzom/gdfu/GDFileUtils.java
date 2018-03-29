@@ -17,9 +17,9 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.Drive.Files;
 import com.google.api.services.drive.Drive.Files.List;
 import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.TeamDrive;
 import com.google.api.services.drive.model.TeamDriveList;
 
@@ -513,13 +513,21 @@ public class GDFileUtils {
 	 * Get file object by given file id
 	 * 
 	 * @param fileId - The file to be got
+	 * @param fields - The fields to be returned
 	 * @return
 	 * @throws IOException
 	 */
-	public File getFileById (String fileId) throws IOException {
+	public File getFileById (String fileId, java.util.List<String> fields) throws IOException {
 		
-		File file = drive.files()
+		Files preparedQuery = drive.files();
+		
+		if (fields == null || fields.isEmpty()) {
+			fields = DEFAULT_FILE_FIELDS;
+		}
+		
+		File file = preparedQuery
 						 .get(fileId)
+						 .setFields(Util.listToString(fields, ",", ""))
 						 .setSupportsTeamDrives(true)
 						 .execute();
 		
@@ -566,30 +574,82 @@ public class GDFileUtils {
 					 .execute();
 		
 	}
+	
+	/**
+	 * Move a file to folder
+	 * 
+	 * <p>
+	 * <strong>Note: </strong>All original parents will be removed after file was moved.
+	 * </p>
+	 * 
+	 * @param fileId
+	 * @param folderId
+	 * @throws IOException
+	 */
+	public void moveFileToFolder(String fileId, String folderId) throws IOException {
+		
+		File file = this.getFileById(fileId, null);
+		
+		if (file != null) {
+			drive.files().update(fileId, null)
+						 .setAddParents(folderId)
+						 .setRemoveParents(Util.listToString(file.getParents(), ",", ""))
+						 .setSupportsTeamDrives(true)
+						 .execute();
+		}
+		
+	}
+	
+	/**
+	 * Add a file to existing folder
+	 * 
+	 * <p>
+	 * The original parents would not be affected.
+	 * </p>
+	 * 
+	 * @param fileId
+	 * @param folderId
+	 * @throws IOException
+	 */
+	public void addFileToFolder(String fileId, String folderId) throws IOException {
+		
+		File file = this.getFileById(fileId, null);
+		
+		if (file != null) {
+			drive.files().update(fileId, null)
+						 .setAddParents(folderId)
+						 .setSupportsTeamDrives(true)
+						 .execute();
+		}
+	}
+	
+	/**
+	 * Remove file from a folder
+	 * 
+	 * <p>
+	 * The file would only disappear from given folder, but the file was not deleted.
+	 * </p>
+	 * 
+	 * @param fileId
+	 * @param folderId
+	 * @throws IOException
+	 */
+	public void removeFileFromFolder (String fileId, String folderId) throws IOException {
+		
+		File file = this.getFileById(fileId, null);
+		
+		if (file != null) {
+			drive.files().update(fileId, null)
+						 .setRemoveParents(folderId)
+						 .setSupportsTeamDrives(true)
+						 .execute();
+		}
+	}
 
 	/* TODO: TO BE DONE.
-    public static void copyFolderToFolder(File srcFolder, File destFolder) {}
-    
-    public static void copyFolderContentToFolder(File srcFolder, File destFolder) {}
-    
-    public static void addFileToFolder(File file, File folder) {}
-    
-    public static void addFolderToFolder(File srcFolder, File destFolder) {}
-    
-    public static void addFolderContentToFolder(File srcFolder, File destFolder) {}
-    
-    public static void moveFileToFolder(File file, File folder) {}
-    
-    public static void moveFolderToFolder(File srcFolder, File destFolder) {}
-    
-    public static void moveFolderContentToFolder(File srcFolder, File destFolder) {}
-    
-    public static void cleanFolder(File folder) {}
-    
-    public static List<File> getFileByPath (String path) {return null;}
-    
-    public static List<String> getPaths (File file) {return null;}
-    
-    public static List<String> getPaths (String fileId) {return null;}
+    public void copyFolderContentToFolder(String srcFolderId, File destFolderId); // copy all files from source folder to destination folder
+    public void moveFolderContentToFolder(String srcFolderId, File destFolderId); // move all files from source folder to destination folder
+    public void cleanFolder(String folderId); //delete all files from given folder
+    public List<String> getPaths (String fileId); //return relative path of a file
     */
 }
