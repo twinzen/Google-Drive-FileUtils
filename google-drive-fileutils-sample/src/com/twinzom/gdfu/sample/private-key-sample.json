@@ -1,3 +1,11 @@
+//This is a sample of private key file
+//You should get one from Google Cloud Platform console
+//1. Select you project in GCP console.
+//2. Go to IAM and Admin > Service Accounts
+//3. Create a service accounts.
+//4. Select "Create Key" for that service accounts.
+//5. A json format private key file will be downloaded.
+
 {
   "type": "service_account",
   "project_id": "united-xxxx-000000",
