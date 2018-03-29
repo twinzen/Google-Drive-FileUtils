@@ -37,14 +37,13 @@ import com.google.api.services.drive.model.TeamDriveList;
  * This client covered the following areas:
  * </p>
  * <ul>
- * <li>uploading file
+ * <li>uploading file and folder
  * <li>downloading file 
  * <li>creating folder
  * <li>listing files and folders
- * <li>copying file
- * <li>moving file
+ * <li>copying file and folders
+ * <li>moving file and folders
  * <li>deleting file
- * <li>converting file id to relative paths
  * <li>renaming file
  * <li>listing Team Drives 
  * </ul>
@@ -318,9 +317,9 @@ public class GDFileUtils {
 			if (localFile.isFile()) {
 				File metadata = new File();
 		        metadata.setParents(Collections.singletonList(destFolderId));
-				upload(metadata, localFile, Collections.singletonList(destFolderId));
+				this.upload(metadata, localFile, Collections.singletonList(destFolderId));
 			} else {
-				java.util.List<File> files = getFilesInFolderByName(localFile.getName(), destFolderId);
+				java.util.List<File> files = this.getFilesInFolderByName(localFile.getName(), destFolderId);
 				
 				File remoteFolder = null;
 				for (File file : files) {
@@ -331,10 +330,10 @@ public class GDFileUtils {
 				}
 				
 				if (remoteFolder == null) {
-					remoteFolder = mkFolder(localFile.getName(), destFolderId);
+					remoteFolder = this.mkFolder(localFile.getName(), destFolderId);
 				}
 				
-				uploadFolder(localFile, destFolderId);
+				this.uploadFolder(localFile, destFolderId);
 			}
 		}
     }
@@ -381,7 +380,7 @@ public class GDFileUtils {
 
 		File file = drive.files()
 						.create(content)
-						.setFields("id")
+						.setFields(Util.listToString(DEFAULT_FILE_FIELDS, ",", ""))
 						.setSupportsTeamDrives(true)
 						.execute();
 		
@@ -390,11 +389,7 @@ public class GDFileUtils {
 	
 	/**
 	 * Finds files within a given folder (and optionally its sub-folders)
-	 * 
-	 * <p>
-	 * With given folder (File id).
-	 * </p>
-	 * 
+ 	 *
 	 * <p>
 	 * If teamDrive was set, this method will return teamDrive's files.
 	 * </p>
@@ -627,7 +622,7 @@ public class GDFileUtils {
 	 * Remove file from a folder
 	 * 
 	 * <p>
-	 * The file would only disappear from given folder, but the file was not deleted.
+	 * The file would only removed from given folder, but it was not deleted.
 	 * </p>
 	 * 
 	 * @param fileId
