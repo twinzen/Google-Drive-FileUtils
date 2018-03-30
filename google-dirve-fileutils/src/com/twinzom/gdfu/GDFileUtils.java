@@ -319,7 +319,7 @@ public class GDFileUtils {
 		        metadata.setParents(Collections.singletonList(destFolderId));
 				this.upload(metadata, localFile, Collections.singletonList(destFolderId));
 			} else {
-				java.util.List<File> files = this.getFilesInFolderByName(localFile.getName(), destFolderId);
+				java.util.List<File> files = this.getFilesByName(localFile.getName(), destFolderId);
 				
 				File remoteFolder = null;
 				for (File file : files) {
@@ -363,7 +363,7 @@ public class GDFileUtils {
     }
 	
 	/**
-	 * Makes a folder
+	 * Makes a new folder
 	 * 
 	 * @param folderName
 	 * @param parentId
@@ -375,7 +375,7 @@ public class GDFileUtils {
 		File content = new File();
 		content.setName(folderName);
 		content.setParents(Arrays.asList(parentId));
-		content.setMimeType("application/vnd.google-apps.folder");
+		content.setMimeType(MIME_TYPE_FOLDER);
 		
 
 		File file = drive.files()
@@ -396,6 +396,7 @@ public class GDFileUtils {
 	 * 
 	 * @param folder
 	 * @param q
+	 * @param fields
 	 * @return
 	 * @throws IOException 
 	 */
@@ -436,7 +437,7 @@ public class GDFileUtils {
      * @return
      * @throws IOException
      */
-    public java.util.List<File> getFilesInFolderByName (String fileName, String folderId) throws IOException {
+    public java.util.List<File> getFilesByName (String fileName, String folderId) throws IOException {
     	
     	
     	List preparedQuery = drive.files().list();
