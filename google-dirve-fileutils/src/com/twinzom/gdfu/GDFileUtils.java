@@ -37,7 +37,7 @@ import com.google.api.services.drive.model.TeamDriveList;
  * This client covered the following areas:
  * </p>
  * <ul>
- * <li>uploading file and folder
+ * <li>uploading file
  * <li>downloading file 
  * <li>creating folder
  * <li>listing files and folders
@@ -298,45 +298,6 @@ public class GDFileUtils {
 		uploadOutputStream.close();
 		return uploadRequest.getResponseCode();
 	}
-    
-    /**
-     * Upload local folder itself, its files and sub-folders
-     * 
-     * <p>
-     * If existing folder was found on Google Drive (checking by name),
-     * it would upload files to existing folder but not creating a new one. 
-     * </p>
-     * 
-     * @param localFolder
-     * @param destFolderId
-     * @throws IOException
-     */
-    public void uploadFolder (java.io.File localFolder, String destFolderId) throws IOException {
-    	Collection<java.io.File> localFiles = Arrays.asList(localFolder.listFiles());
-		for (java.io.File localFile : localFiles) {
-			if (localFile.isFile()) {
-				File metadata = new File();
-		        metadata.setParents(Collections.singletonList(destFolderId));
-				this.upload(metadata, localFile, Collections.singletonList(destFolderId));
-			} else {
-				java.util.List<File> files = this.getFilesByName(localFile.getName(), destFolderId);
-				
-				File remoteFolder = null;
-				for (File file : files) {
-					if (file.getMimeType().equals(MIME_TYPE_FOLDER)) {
-						remoteFolder = file;
-						break;
-					}
-				}
-				
-				if (remoteFolder == null) {
-					remoteFolder = this.mkFolder(localFile.getName(), destFolderId);
-				}
-				
-				this.uploadFolder(localFile, destFolderId);
-			}
-		}
-    }
     
     
     /**
